@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aesthetic Corner - With Checkout</title>
+  <style>
+    body { margin: 0; font-family: "Comic Sans MS", "Comic Sans", cursive; background: #fff0f5; color: #444; }
+    header { background: #ffb6d9; padding: 15px; color: white; display: flex; align-items: center; gap: 20px; }
+    header img { width: 80px; border-radius: 10px; }
+    .search-bar { flex: 1; display: flex; }
+    .search-bar input { width: 100%; padding: 10px; border: none; border-radius: 4px 0 0 4px; font-size: 16px; }
+    .search-bar button { background: #ffd1dc; border: none; padding: 11px 20px; cursor: pointer; border-radius: 0 4px 4px 0; font-size: 16px; color: #444; }
+
+    .cart-btn { background: transparent; border: 2px solid rgba(255,255,255,0.3); padding: 8px 12px; border-radius: 8px; cursor: pointer; color: white; }
+    .cart-count { background: #ff6fb3; padding: 2px 8px; border-radius: 12px; margin-left: 8px; font-weight: bold; }
+
+    .shop-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding: 30px; }
+    .item { background: #ffe6f0; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; }
+    .item:hover { transform: scale(1.03); }
+    .item img { width: 100%; height: 200px; object-fit: contain; }
+    .item h3 { font-size: 20px; margin: 10px 0; color: #ff69b4; }
+    .price { font-size: 18px; color: #ff85c8; font-weight: bold; }
+    .add-to-cart { background: #ff69b4; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+
+    .modal, .drawer, .checkout-modal { display: none; position: fixed; z-index: 30; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; }
+    .overlay { background-color: rgba(0,0,0,0.5); width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+    .modal-content, .drawer-content, .checkout-content { position: relative; background-color: #fff0f5; margin: 5% auto; padding: 20px; border-radius: 15px; width: 90%; max-width: 720px; z-index: 40; }
+    .drawer-content { margin: 0; position: absolute; right: 0; top: 0; height: 100%; width: 360px; max-width: 90%; border-radius: 0 0 0 12px; }
+    .close { color: #ff69b4; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+
+    .tabs { display: flex; gap: 10px; margin-top: 15px; }
+    .tab { padding: 10px 15px; background: #ffd1dc; border-radius: 8px; cursor: pointer; color: #444; }
+    .tab:hover, .tab.active { background: #ffb6d9; color: white; }
+    .tab-content { margin-top: 15px; }
+
+    .cart-item { display:flex; gap:10px; align-items:center; padding:10px 0; border-bottom:1px dashed rgba(0,0,0,0.06);} 
+    .cart-item img { width:60px; height:60px; object-fit:cover; border-radius:8px; }
+    .qty { width:48px; }
+
+    .checkout-form input { width:100%; padding:8px; margin:6px 0 12px 0; border-radius:6px; border:1px solid #ffd1dc; }
+    .place-order { background:#ff69b4; color:white; padding:12px 18px; border:none; border-radius:8px; cursor:pointer; }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="https://via.placeholder.com/80x80?text=Logo" alt="Logo" />
+  <div class="search-bar">
+    <input type="text" placeholder="Search Aesthetic Items..." />
+    <button>Search</button>
+  </div>
+  <div>
+    <button id="openCart" class="cart-btn">Cart <span id="cartCount" class="cart-count">0</span></button>
+  </div>
+</header>
+
+<div class="shop-container" id="shop"></div>
+
+<!-- Product Modal -->
+<div id="productModal" class="modal">
+  <div class="overlay"></div>
+  <div class="modal-content">
+    <span class="close" id="closeProduct">&times;</span>
+    <img id="modal-img" style="width:100%; height:200px; object-fit:contain;" />
+    <h2 id="modal-name"></h2>
+    <p id="modal-price"></p>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="description">Description</div>
+      <div class="tab" data-tab="reviews">Reviews</div>
+      <div class="tab" data-tab="recommended">Recommended</div>
+    </div>
+    <div class="tab-content" id="tab-content"></div>
+
+    <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
+      <label>Qty:</label>
+      <input id="modal-qty" type="number" value="1" min="1" style="width:60px; padding:6px; border-radius:6px; border:1px solid #ffd1dc;" />
+      <button id="addFromModal" class="add-to-cart">Add to Cart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cart Drawer -->
+<div id="cartDrawer" class="drawer">
+  <div class="overlay" id="cartOverlay"></div>
+  <div class="drawer-content">
+    <div style="padding:16px;">
+      <span class="close" id="closeDrawer">&times;</span>
+      <h2>Your Cart</h2>
+      <div id="cartItems"></div>
+      <div style="margin-top:12px; font-weight:bold;">Subtotal: AED <span id="cartSubtotal">0.00</span></div>
+
+      <div style="margin-top:12px; display:flex; gap:10px;">
+        <button id="continueShopping" class="add-to-cart" style="background:#ffd1dc; color:#444;">Continue Shopping</button>
+        <button id="goToCheckout" class="add-to-cart">Proceed to Checkout</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div id="checkoutModal" class="checkout-modal">
+  <div class="overlay" id="checkoutOverlay"></div>
+  <div class="checkout-content">
+    <span class="close" id="closeCheckout">&times;</span>
+    <h2>Checkout</h2>
+
+    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+
+      <div style="flex:1; min-width:280px;">
+        <h3>Shipping Details</h3>
+        <form id="checkoutForm" class="checkout-form">
+          <input type="text" id="fullname" placeholder="Full name" required />
+          <input type="email" id="email" placeholder="Email" required />
+          <input type="text" id="address" placeholder="Address" required />
+          <input type="text" id="city" placeholder="City" required />
+          <input type="text" id="postal" placeholder="Postal code" required />
+        </form>
+      </div>
+
+      <div style="width:320px; max-width:100%;">
+        <h3>Order Summary</h3>
+        <div id="checkoutSummary"></div>
+        <div style="margin-top:10px; font-weight:bold;">Total: AED <span id="checkoutTotal">0.00</span></div>
+
+        <button id="placeOrder" class="place-order" style="margin-top:12px;">Place Order (Demo)</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// PRODUCTS
+const products = [
+  { id: 'pen', name: 'Cute Pen', price: 3, img: 'images/cute-pen.jpg', description: 'Cute pastel pen set.' },
+  { id: 'sticker', name: 'Sticker Pack', price: 5, img: 'images/sticker-pack.jpg', description: 'Aesthetic sticker pack.' },
+  { id: 'bracelet', name: 'Friendship Bracelet', price: 4, img: 'images/friendship-bracelet.jpg', description: 'Pastel bracelet.' },
+  { id: 'keychain', name: 'Cute Keychain', price: 6, img: 'images/cute-keychain.jpg', description: 'Cute keychain.' },
+  { id: 'notebook', name: 'Pastel Notebook', price: 8, img: 'images/pastel-notebook.jpg', description: 'Soft pastel notebook for journaling.' },
+  { id: 'highlighters', name: 'Pastel Highlighters', price: 10, img: 'images/pastel-highlighters.jpg', description: 'A set of pastel aesthetic highlighters.' },
+  { id: 'plushie', name: 'Mini Plushie', price: 12, img: 'images/plushie.jpg', description: 'Cute fluffy mini plushie.' },
+  { id: 'scrunchie', name: 'Silk Scrunchie', price: 4, img: 'images/scrunchie.jpg', description: 'Soft silky scrunchie in pastel colors.' },
+  { id: 'bag', name: 'Aesthetic Tote Bag', price: 15, img: 'images/tote-bag.jpg', description: 'Cute tote bag for school or shopping.' },
+  { id: 'markers', name: 'Gel Markers', price: 9, img: 'images/gel-markers.jpg', description: 'Smooth pastel gel markers.' },
+  { id: 'erasers', name: 'Cute Erasers', price: 3, img: 'images/cute-erasers.jpg', description: 'Mini adorable erasers in fun shapes.' },
+  { id: 'waterbottle', name: 'Pastel Water Bottle', price: 20, img: 'images/water-bottle.jpg', description: 'Aesthetic leakproof bottle.' }
+];
+
+const shop = document.getElementById('shop');
+const cartCountEl = document.getElementById('cartCount');
+let cart = JSON.parse(localStorage.getItem('cart_v1') || '[]');
+
+function renderShop(){
+  shop.innerHTML = '';
+  products.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `
+      <img src="${p.img}" />
+      <h3>${p.name}</h3>
+      <p class="price">AED ${p.price}</p>
+      <div style='display:flex; gap:10px;'>
+        <button class='add-to-cart' data-id='${p.id}'>Add to Cart</button>
+        <button class='view' data-id='${p.id}' style='background:#ffd1dc; border:none; padding:8px 12px; border-radius:8px;'>View</button>
+      </div>
+    `
+    shop.appendChild(el);
+  });
+}
+
+function saveCart(){ localStorage.setItem('cart_v1', JSON.stringify(cart)); updateCartUI(); }
+function updateCartUI(){ cartCountEl.textContent = cart.reduce((s,i)=>s+i.qty,0); document.getElementById('cartSubtotal').textContent = cart.reduce((s,i)=>s+i.qty*i.price,0).toFixed(2); }
+
+renderShop(); updateCartUI();
+
+// Add/View Buttons
+shop.addEventListener('click', (e)=>{
+  const id = e.target.dataset.id;
+  if(!id) return;
+  const product = products.find(p=>p.id===id);
+
+  if(e.target.classList.contains('add-to-cart')){
+    addToCart(product,1);
+    alert(product.name + ' added to cart');
+  }
+
+  if(e.target.classList.contains('view')){
+    openProductModal(product);
+  }
+});
+
+// PRODUCT MODAL
+const productModal = document.getElementById('productModal');
+const modalImg = document.getElementById('modal-img');
+const modalName = document.getElementById('modal-name');
+const modalPrice = document.getElementById('modal-price');
+const tabContent = document.getElementById('tab-content');
+const modalQty = document.getElementById('modal-qty');
+let currentProduct = null;
+
+function openProductModal(product){
+  currentProduct = product;
+  modalImg.src = product.img;
+  modalName.textContent = product.name;
+  modalPrice.textContent = 'AED ' + product.price;
+  tabContent.textContent = product.description;
+  modalQty.value = 1;
+  productModal.style.display = 'block';
+}
+
+document.getElementById('closeProduct').onclick = () => productModal.style.display='none';
+
+productModal.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    productModal.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    if(tab.dataset.tab==='description') tabContent.textContent = currentProduct.description;
+    if(tab.dataset.tab==='reviews') tabContent.textContent = 'No reviews yet.';
+    if(tab.dataset.tab==='recommended') tabContent.textContent = 'More items coming soon!';
+  });
+});
+
+document.getElementById('addFromModal').onclick = ()=>{
+  const qty = Math.max(1, parseInt(modalQty.value));
+  addToCart(currentProduct, qty);
+  productModal.style.display='none';
+  alert(currentProduct.name + ' added to cart');
+};
+
+// CART
+const cartDrawer = document.getElementById('cartDrawer');
+const cartItemsEl = document.getElementById('cartItems');
+const cartOverlay = document.getElementById('cartOverlay');
+const closeDrawer = document.getElementById('closeDrawer');
+
+function addToCart(product, qty){
+  const existing = cart.find(i=>i.id===product.id);
+  if(existing){ existing.qty += qty; }
+  else cart.push({ id:product.id, name:product.name, price:product.price, img:product.img, qty });
+  saveCart();
+}
+
+function renderCartItems(){
+  if(cart.length===0){ cartItemsEl.innerHTML='<p>Your cart is empty.</p>'; return; }
+  cartItemsEl.innerHTML='';
+  cart.forEach(item=>{
+    const div = document.createElement('div');
+    div.className='cart-item';
+    div.innerHTML = `
+      <img src='${item.img}' />
+      <div style='flex:1;'>
+        <b>${item.name}</b><br>
+        AED ${item.price} x <input class='qty' data-id='${item.id}' type='number' value='${item.qty}' min='1'>
+      </div>
+      <div style='text-align:right;'>
+        AED ${(item.qty*item.price).toFixed(2)}<br>
+        <button data-remove='${item.id}' style='background:none; border:none; color:#ff69b4;'>Remove</button>
+      </div>`;
+    cartItemsEl.appendChild(div);
+  });
+}
+
+document.getElementById('openCart').onclick = ()=>{ cartDrawer.style.display='block'; renderCartItems(); };
+closeDrawer.onclick = ()=> cartDrawer.style.display='none';
+cartOverlay.onclick = ()=> cartDrawer.style.display='none';
+document.getElementById('continueShopping').onclick = ()=> cartDrawer.style.display='none';
+
+cartItemsEl.addEventListener('input', (e)=>{
+  if(e.target.classList.contains('qty')){
+    const item = cart.find(i=>i.id===e.target.dataset.id);
+    item.qty = Math.max(1,parseInt(e.target.value));
+    saveCart(); renderCartItems();
+  }
+});
+cartItemsEl.addEventListener('click', (e)=>{
+  if(e.target.dataset.remove){
+    cart = cart.filter(i=>i.id!==e.target.dataset.remove);
+    saveCart(); renderCartItems();
+  }
+});
+
+// CHECKOUT
+const checkoutModal = document.getElementById('checkoutModal');
+const checkoutOverlay = document.getElementById('checkoutOverlay');
+const closeCheckout = document.getElementById('closeCheckout');
+const checkoutSummary = document.getElementById('checkoutSummary');
+
+document.getElementById('goToCheckout').onclick = ()=>{
+  if(cart.length===0){ alert('Your cart is empty!'); return; }
+  cartDrawer.style.display='none';
+  checkoutSummary.innerHTML='';
+  cart.forEach(item=>{
+    const d = document.createElement('div');
+    d.textContent = `${item.name} x ${item.qty} — AED ${(item.qty*item.price).toFixed(2)}`;
+    checkoutSummary.appendChild(d);
+  });
+  document.getElementById('checkoutTotal').textContent = cart.reduce((s,i)=>s+i.qty*i.price,0).toFixed(2);
+  checkoutModal.style.display='block';
+};
+
+closeCheckout.onclick = ()=> checkoutModal.style.display='none';
+checkoutOverlay.onclick = ()=> checkoutModal.style.display='none';
+
+document.getElementById('placeOrder').onclick = ()=>{
+  alert('Order placed! (Demo only)');
+  cart = [];
+  saveCart();
+  checkoutModal.style.display='none';
+};
+
+</script>
+</body>
+</html>
